@@ -1,0 +1,193 @@
+{
+  "buildings": [
+    {
+      "code": "A",
+      "name": "Building A",
+      "numberOfFloors": 5,
+      "address": "Khu A",
+      "description": "Tòa nhà nam",
+      "status": "ACTIVE"
+    },
+    {
+      "code": "B",
+      "name": "Building B",
+      "numberOfFloors": 4,
+      "address": "Khu B",
+      "description": "Tòa nhà nữ",
+      "status": "ACTIVE"
+    },
+    {
+      "code": "C",
+      "name": "Building C",
+      "numberOfFloors": 6,
+      "address": "Khu C",
+      "description": "Đang bảo trì hệ thống điện",
+      "status": "INACTIVE"
+    }
+  ],
+  "rooms": [
+    {
+      "id": 1,
+      "roomNumber": "101",
+      "buildingCode": "A",
+      "buildingName": "Building A",
+      "monthlyRent": 80,
+      "maximumCapacity": 4,
+      "currentOccupancy": 2,
+      "availableBeds": 2,
+      "occupancyStatus": "AVAILABLE",
+      "status": "ACTIVE"
+    },
+    {
+      "id": 2,
+      "roomNumber": "102",
+      "buildingCode": "A",
+      "buildingName": "Building A",
+      "monthlyRent": 90,
+      "maximumCapacity": 4,
+      "currentOccupancy": 4,
+      "availableBeds": 0,
+      "occupancyStatus": "FULL",
+      "status": "ACTIVE"
+    },
+    {
+      "id": 3,
+      "roomNumber": "201",
+      "buildingCode": "B",
+      "buildingName": "Building B",
+      "monthlyRent": 100,
+      "maximumCapacity": 2,
+      "currentOccupancy": 1,
+      "availableBeds": 1,
+      "occupancyStatus": "AVAILABLE",
+      "status": "ACTIVE"
+    },
+    {
+      "id": 4,
+      "roomNumber": "202",
+      "buildingCode": "B",
+      "buildingName": "Building B",
+      "monthlyRent": 75,
+      "maximumCapacity": 3,
+      "currentOccupancy": 0,
+      "availableBeds": 3,
+      "occupancyStatus": "AVAILABLE",
+      "status": "INACTIVE"
+    }
+  ],
+  "students": [
+    {
+      "id": 1,
+      "studentCode": "SV001",
+      "fullName": "Nguyễn Văn An",
+      "gender": "MALE",
+      "dateOfBirth": "2004-02-12",
+      "citizenId": "012345678901",
+      "phoneNumber": "0912345678",
+      "address": "Hanoi",
+      "className": "CNTT-01",
+      "major": "Computer Science",
+      "hometown": "Hanoi",
+      "roomId": 1,
+      "roomNumber": "101",
+      "buildingCode": "A"
+    },
+    {
+      "id": 2,
+      "studentCode": "SV002",
+      "fullName": "Tran Minh Duc",
+      "gender": "MALE",
+      "dateOfBirth": "2003-08-25",
+      "citizenId": "012345678902",
+      "phoneNumber": "0923456789",
+      "address": "Hai Phong",
+      "className": "CNTT-01",
+      "major": "Computer Science",
+      "hometown": "Hai Phong",
+      "roomId": 1,
+      "roomNumber": "101",
+      "buildingCode": "A"
+    },
+    {
+      "id": 3,
+      "studentCode": "SV003",
+      "fullName": "Le Hoang Nam",
+      "gender": "MALE",
+      "dateOfBirth": "2004-11-03",
+      "citizenId": "012345678903",
+      "phoneNumber": "0934567890",
+      "address": "Nam Dinh",
+      "className": "KTPM-02",
+      "major": "Software Engineering",
+      "hometown": "Nam Dinh",
+      "roomId": 2,
+      "roomNumber": "102",
+      "buildingCode": "A"
+    },
+    {
+      "id": 4,
+      "studentCode": "SV004",
+      "fullName": "Pham Quang Huy",
+      "gender": "MALE",
+      "dateOfBirth": "2003-05-17",
+      "citizenId": "012345678904",
+      "phoneNumber": "0945678901",
+      "address": "Thanh Hoa",
+      "className": "KTPM-02",
+      "major": "Software Engineering",
+      "hometown": "Thanh Hoa",
+      "roomId": 2,
+      "roomNumber": "102",
+      "buildingCode": "A"
+    },
+    {
+      "id": 5,
+      "studentCode": "SV005",
+      "fullName": "Do Thi Mai",
+      "gender": "FEMALE",
+      "dateOfBirth": "2004-07-21",
+      "citizenId": "012345678905",
+      "phoneNumber": "0956789012",
+      "address": "Da Nang",
+      "className": "QTKD-01",
+      "major": "Business Administration",
+      "hometown": "Da Nang",
+      "roomId": 3,
+      "roomNumber": "201",
+      "buildingCode": "B"
+    }
+  ],
+  "staff": [
+    {
+      "id": 1,
+      "employeeCode": "ST001",
+      "fullName": "Phạm Văn Long",
+      "gender": "MALE",
+      "dateOfBirth": "1985-06-15",
+      "citizenId": "111222333444",
+      "phoneNumber": "0901234567",
+      "address": "Hanoi",
+      "assignedBuildingCode": "A",
+      "assignedBuildingName": "Building A",
+      "username": "admin",
+      "password": "123",
+      "role": "Manager"
+    },
+    {
+      "id": 2,
+      "employeeCode": "ST002",
+      "fullName": "Nguyễn Thị Mai",
+      "gender": "FEMALE",
+      "dateOfBirth": "1985-06-15",
+      "citizenId": "111222333444",
+      "phoneNumber": "0901234567",
+      "address": "Hanoi",
+      "assignedBuildingCode": "A",
+      "assignedBuildingName": "Building A",
+      "username": "accountant",
+      "password": "123",
+      "role": "Accountant"
+    }
+  ],
+  "$schema": "./node_modules/json-server/schema.json"
+}

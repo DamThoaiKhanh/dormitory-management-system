@@ -1,0 +1,98 @@
+# =========================
+# OS / Windows
+# =========================
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+
+# =========================
+# VS Code / IDEs
+# =========================
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# =========================
+# Frontend: Vue + Vite + Tailwind CSS
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/.cache/
+frontend/coverage/
+
+# Package manager logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# Environment files
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Optional package manager caches
+frontend/.npm/
+frontend/.yarn/
+frontend/.pnpm-store/
+
+# =========================
+# Backend: Spring Boot
+# =========================
+
+# Maven
+backend/target/
+
+# Gradle
+backend/.gradle/
+backend/build/
+backend/out/
+
+# Java compiled files
+backend/*.class
+
+# Spring Boot / application logs
+backend/logs/
+backend/*.log
+
+# Local environment/config files
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Ignore local Spring config containing secrets
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-local.yml
+backend/src/main/resources/application-local.yaml
+
+# =========================
+# General
+# =========================
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Test / coverage output
+coverage/
+.nyc_output/
+
+# Local uploads or generated files
+uploads/
+tmp/
+temp/
