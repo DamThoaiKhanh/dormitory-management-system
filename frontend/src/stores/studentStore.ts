@@ -58,11 +58,11 @@ export const useStudentStore = defineStore('student', {
       }
     },
 
-    async addStudent(student: Student): Promise<ApiResult<Student>> {
+    async addStudent(student: NewStudent): Promise<ApiResult<Student>> {
       this.error = null;
 
       try {
-        const result = await apiClient.post<Student, Student>('/students', student);
+        const result = await apiClient.post<Student, NewStudent>('/students', student);
 
         if (result.success) {
           this.students.push(result.data);

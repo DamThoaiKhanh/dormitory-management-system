@@ -3,33 +3,26 @@ import { ref, computed, onMounted } from 'vue';
 import { useStaffStore } from '../stores/staffStore';
 import { useBuildingStore } from '../stores/buildingStore';
 import { useToast } from 'vue-toastification';
-import { Plus, Search } from '@lucide/vue';
+import Swal from 'sweetalert2';
+import { Plus } from '@lucide/vue';
 import { getErrorMessage } from '../services/api';
 import type { NewStaff, Staff } from '../types/staff';
+
+// Imports Components
+import StaffFilter from '../components/staff/StaffFilter.vue';
+import StaffTable from '../components/staff/StaffTable.vue';
+import StaffFormModal from '../components/staff/StaffFormModal.vue';
 
 const staffStore = useStaffStore();
 const buildingStore = useBuildingStore();
 const toast = useToast();
 
-const staffList = computed(() => staffStore.staffList);
-const buildingsList = computed(() => buildingStore.buildings.map((building) => building.code));
-
-onMounted(async () => {
-  try {
-    await staffStore.fetchStaff();
-    await buildingStore.fetchBuildings();
-  } catch (error) {
-    toast.error(getErrorMessage(error));
-  }
-});
-
 const searchQuery = ref('');
 const selectedBuilding = ref('All');
-const isAddEditModalOpen = ref(false);
-
+const isModalOpen = ref(false);
 const editingStaffId = ref<number | null>(null);
 
-const newStaff = ref<NewStaff>({
+const currentStaffData = ref<NewStaff>({
   employeeCode: '',
   fullName: '',
   gender: 'MALE',
@@ -39,6 +32,19 @@ const newStaff = ref<NewStaff>({
   address: '',
   assignedBuildingCode: '',
 });
+
+onMounted(async () => {
+  try {
+    await Promise.all([staffStore.fetchStaff(), buildingStore.fetchBuildings()]);
+  } catch (error) {
+    toast.error(getErrorMessage(error));
+  }
+});
+
+const staffList = computed(() => staffStore.staffList);
+const buildingsList = computed(() => buildingStore.buildings.map((b) => b.code));
+
+const isEditMode = computed(() => editingStaffId.value !== null);
 
 const filteredStaff = computed(() => {
   return staffList.value.filter((s) => {
@@ -56,12 +62,22 @@ const filteredStaff = computed(() => {
 
 const openAddModal = () => {
   editingStaffId.value = null;
-  isAddEditModalOpen.value = true;
+  currentStaffData.value = {
+    employeeCode: '',
+    fullName: '',
+    gender: 'MALE',
+    dateOfBirth: '',
+    citizenId: '',
+    phoneNumber: '',
+    address: '',
+    assignedBuildingCode: 'None',
+  };
+  isModalOpen.value = true;
 };
 
 const openEditModal = (staff: Staff) => {
   editingStaffId.value = staff.id;
-  newStaff.value = {
+  currentStaffData.value = {
     employeeCode: staff.employeeCode,
     fullName: staff.fullName,
     gender: staff.gender,
@@ -69,47 +85,60 @@ const openEditModal = (staff: Staff) => {
     citizenId: staff.citizenId,
     phoneNumber: staff.phoneNumber,
     address: staff.address,
-    assignedBuildingCode: staff.assignedBuildingCode,
+    assignedBuildingCode: staff.assignedBuildingCode || 'None',
   };
-
-  isAddEditModalOpen.value = true;
+  isModalOpen.value = true;
 };
 
 const handleSaveStaff = async () => {
-  if (newStaff.value.fullName.trim() === '') {
-    toast.error('Name can not leave empty!');
+  if (!currentStaffData.value.fullName.trim()) {
+    toast.error('Name cannot be left empty!');
     return;
   }
 
-  if (editingStaffId.value) {
-    try {
-      const result = await staffStore.updateStaff(editingStaffId.value, { ...newStaff.value });
-      if (result.success) {
-        toast.success(`Update Staff ${result.data.fullName} sucessfully!`);
-      } else {
-        toast.error(result.error.message);
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error));
+  try {
+    let result;
+    if (isEditMode.value && editingStaffId.value) {
+      result = await staffStore.updateStaff(editingStaffId.value, { ...currentStaffData.value });
+    } else {
+      result = await staffStore.addStaff(currentStaffData.value);
     }
-  } else {
-    try {
-      const result = await staffStore.addStaff(newStaff.value);
-      if (result.success) {
-        toast.success(`Add Staff ${result.data.fullName} sucessfully!`);
-      } else {
-        toast.error(result.error.message);
-      }
-    } catch (error) {
-      toast.error(getErrorMessage(error));
+
+    if (result.success) {
+      toast.success(
+        `${isEditMode.value ? 'Updated' : 'Added'} staff ${result.data.fullName} successfully!`
+      );
+      isModalOpen.value = false;
+    } else {
+      toast.error(result.error.message);
     }
+  } catch (error) {
+    toast.error(getErrorMessage(error));
   }
-  isAddEditModalOpen.value = false;
 };
 
-const handleDeleteStaff = async (id: number, name: string) => {
-  if (confirm(`Bạn có chắc chắn muốn xóa nhân viên ${name}?`)) {
-    await staffStore.deleteStaff(id);
+const handleDeleteStaff = async (staff: Staff) => {
+  const confirmResult = await Swal.fire({
+    title: 'Delete Staff',
+    text: `Are you sure you want to remove employee ${staff.fullName}?`,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, delete',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#d33',
+  });
+
+  if (confirmResult.isConfirmed) {
+    try {
+      const result = await staffStore.deleteStaff(staff.id!);
+      if (result.success) {
+        Swal.fire('Success', 'Staff member deleted.', 'success');
+      } else {
+        Swal.fire('Failed', result.error?.message || 'Delete operation failed', 'error');
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   }
 };
 </script>
@@ -131,207 +160,23 @@ const handleDeleteStaff = async (id: number, name: string) => {
       </button>
     </div>
 
-    <!-- Filters -->
-    <div
-      class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row gap-4"
-    >
-      <div class="flex-1 relative">
-        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
-          <Search :size="20" />
-        </span>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search staff by name or phone..."
-          class="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
-        />
-      </div>
-      <div class="w-full sm:w-64 flex items-center space-x-2">
-        <span class="text-sm text-gray-500 whitespace-nowrap">Assigned Building:</span>
-        <select
-          v-model="selectedBuilding"
-          class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
-        >
-          <option value="All">All</option>
-          <option v-for="b in buildingsList" :key="b" :value="b">
-            {{ b }}
-          </option>
-          <option value="None">None (Unassigned)</option>
-        </select>
-      </div>
-    </div>
+    <!-- Filters component (Dumb) -->
+    <StaffFilter
+      v-model:searchQuery="searchQuery"
+      v-model:selectedBuilding="selectedBuilding"
+      :buildingsList="buildingsList"
+    />
 
-    <!-- Data Table -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr
-              class="bg-gray-50 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              <th class="px-6 py-4">Name</th>
-              <th class="px-6 py-4">Code</th>
-              <th class="px-6 py-4">Phone Number</th>
-              <th class="px-6 py-4">Assigned Building</th>
-              <th class="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-            <tr
-              v-for="s in filteredStaff"
-              :key="s.id"
-              class="hover:bg-gray-50/70 transition-colors"
-            >
-              <td class="px-6 py-4 font-semibold text-gray-900">
-                {{ s.fullName }}
-              </td>
-              <td class="px-6 py-4 text-gray-500">{{ s.employeeCode }}</td>
-              <td class="px-6 py-4 text-gray-500">{{ s.phoneNumber }}</td>
-              <td class="px-6 py-4">
-                <span
-                  :class="
-                    s.assignedBuildingName === 'None'
-                      ? 'text-gray-400 italic'
-                      : 'font-medium text-gray-950'
-                  "
-                >
-                  {{ s.assignedBuildingName }}
-                </span>
-              </td>
-              <td class="px-6 py-4 text-right space-x-2 text-sm font-medium">
-                <button @click="openEditModal(s)" class="text-blue-600 hover:text-blue-900">
-                  Edit
-                </button>
-                <button
-                  @click="handleDeleteStaff(s.id!, s.fullName)"
-                  class="text-rose-600 hover:text-rose-900 ml-2"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Table component (Dumb) -->
+    <StaffTable :staffList="filteredStaff" @edit="openEditModal" @delete="handleDeleteStaff" />
 
-    <!-- MODAL -->
-    <div
-      v-if="isAddEditModalOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-    >
-      <div
-        class="bg-white w-full max-w-md max-h-[calc(100vh-2rem)] rounded-xl shadow-xl border border-gray-100 overflow-hidden flex flex-col"
-      >
-        <div class="shrink-0 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 class="text-base font-bold text-gray-900">
-            {{ editingStaffId ? 'Edit Staff Member' : 'Add Staff Member' }}
-          </h3>
-          <button @click="isAddEditModalOpen = false" class="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
-        <div class="p-6 space-y-4 flex-1 min-h-0 overflow-y-auto">
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1"
-              >Employee Code *</label
-            >
-            <input
-              v-model="newStaff.employeeCode"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1"
-              >Full Name *</label
-            >
-            <input
-              v-model="newStaff.fullName"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Gender</label>
-            <select
-              v-model="newStaff.gender"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="MALE">MALE</option>
-              <option value="FEMALE">FEMALE</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1"
-              >Date of birth *</label
-            >
-            <input
-              v-model="newStaff.dateOfBirth"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1"
-              >Citizen Id *</label
-            >
-            <input
-              v-model="newStaff.citizenId"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1"
-              >Phone Number *</label
-            >
-            <input
-              v-model="newStaff.phoneNumber"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Address</label>
-            <input
-              v-model="newStaff.address"
-              type="text"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1"
-              >Assign to Building</label
-            >
-            <select
-              v-model="newStaff.assignedBuildingCode"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="None">-- Leave Unassigned --</option>
-              <option v-for="b in buildingsList" :key="b" :value="b">
-                {{ b }}
-              </option>
-            </select>
-          </div>
-        </div>
-        <div
-          class="shrink-0 px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end space-x-3"
-        >
-          <button
-            @click="isAddEditModalOpen = false"
-            class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            @click="handleSaveStaff"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-sm"
-          >
-            Save
-          </button>
-        </div>
-      </div>
-    </div>
+    <!-- Form modal (Dumb) -->
+    <StaffFormModal
+      v-model="isModalOpen"
+      v-model:staffData="currentStaffData"
+      :isEditMode="isEditMode"
+      :buildingsList="buildingsList"
+      @save="handleSaveStaff"
+    />
   </div>
 </template>
