@@ -9,7 +9,7 @@ const BASE_SERVER_URL = LOCAL_JAVA_SPRING;
 
 const axiosClient = axios.create({
   baseURL: BASE_SERVER_URL,
-  timeout: 10_000,
+  timeout: 20_000,
   headers: {
     Accept: 'application/json',
   },

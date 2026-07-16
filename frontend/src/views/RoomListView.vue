@@ -7,8 +7,9 @@ import { useAuthStore } from '../stores/authStore';
 import Swal from 'sweetalert2';
 import { useToast } from 'vue-toastification';
 import { Plus, Search } from '@lucide/vue';
-import type { Room } from '../types/room';
+import type { Room, NewRoom } from '../types/room';
 import TableSkeleton, { type SkeletonColumn } from '../components/common/TableSkeleton.vue';
+import { getErrorMessage } from '../services/api.ts';
 
 const roomStore = useRoomStore();
 const studentStore = useStudentStore();
@@ -26,24 +27,18 @@ onMounted(async () => {
   await buildingStore.fetchBuildings();
 });
 
-// const buildingsList = ['Building A', 'Building B', 'Building C'];
-const buildingsList = computed(() => buildingStore.buildings.map((building) => building.name));
+const buildingsList = computed(() => buildingStore.buildings.map((building) => building.code));
 const searchQuery = ref('');
 const selectedBuilding = ref('All');
 
 const isAddEditModalOpen = ref(false);
 const editingRoomId = ref<number | null>(null);
 
-const newRoom = ref<Room>({
-  id: 1,
-  roomNumber: '101',
-  buildingCode: 'A',
-  buildingName: 'Building A',
-  monthlyRent: 0,
+const newRoom = ref<NewRoom>({
+  roomNumber: '',
+  buildingCode: '',
+  monthlyRent: 50,
   maximumCapacity: 0,
-  currentOccupancy: 0,
-  availableBeds: 0,
-  occupancyStatus: 'EMPTY',
   status: 'ACTIVE',
 });
 
@@ -76,22 +71,46 @@ const openAddModal = () => {
 
 const openEditModal = (room: Room) => {
   editingRoomId.value = room.id;
-  newRoom.value = room;
+  newRoom.value = {
+    roomNumber: room.roomNumber,
+    buildingCode: room.buildingCode,
+    monthlyRent: room.monthlyRent,
+    maximumCapacity: room.maximumCapacity,
+    status: room.status,
+  };
   isAddEditModalOpen.value = true;
 };
 
 const handleSaveRoom = async () => {
   if (!newRoom.value.roomNumber) {
-    alert('Vui lòng nhập số phòng!');
+    toast.error('Please enter room number.');
     return;
   }
 
   // Editing room
   if (editingRoomId.value) {
-    await roomStore.updateRoom(editingRoomId.value, { ...newRoom.value });
+    try {
+      const result = await roomStore.updateRoom(editingRoomId.value, { ...newRoom.value });
+      if (result.success) {
+        toast.success(`Updated room successfully!`);
+      } else {
+        toast.error(result.error.message);
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   } else {
     // Add new room
-    await roomStore.addRoom({ ...newRoom.value });
+    try {
+      const result = await roomStore.addRoom(newRoom.value);
+      if (result.success) {
+        toast.success(`Added new room successfully!`);
+      } else {
+        toast.error(result.error.message);
+      }
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    }
   }
 
   isAddEditModalOpen.value = false;
@@ -140,11 +159,11 @@ const getOccupancyLabel = (occupied: number, capacity: number) => {
   };
 };
 
-const filteredRooms = computed(() => {
+const filteredRooms = computed((): Room[] => {
   return rooms.value.filter((room) => {
     const matchesSearch = room.roomNumber.includes(searchQuery.value);
     const matchesBuilding =
-      selectedBuilding.value === 'All' || room.buildingName === selectedBuilding.value;
+      selectedBuilding.value === 'All' || room.buildingCode === selectedBuilding.value;
     return matchesSearch && matchesBuilding;
   });
 });
@@ -347,11 +366,11 @@ const skeletonColumns: SkeletonColumn[] = [
           </div>
           <div>
             <div class="flex items-center gap-1 mb-1">
-              <label class="text-xs font-semibold text-gray-600 uppercase"> Building </label>
+              <label class="text-xs font-semibold text-gray-600 uppercase"> Building Code </label>
               <span class="text-red-500">*</span>
             </div>
             <select
-              v-model="newRoom.buildingName"
+              v-model="newRoom.buildingCode"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
             >
               <option v-for="building in buildingsList" :key="building" :value="building">
@@ -393,8 +412,8 @@ const skeletonColumns: SkeletonColumn[] = [
               v-model="newRoom.status"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
             >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
+              <option value="ACTIVE">ACTIVE</option>
+              <option value="INACTIVE">INACTIVE</option>
             </select>
           </div>
         </div>
@@ -418,7 +437,7 @@ const skeletonColumns: SkeletonColumn[] = [
       </div>
     </div>
 
-    <!-- Detail roo & occutants -->
+    <!-- Detail room & occutants -->
     <div
       v-if="isDetailModalOpen && selectedRoom"
       class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in"

@@ -1,3 +1,5 @@
+export type RoomStatus = 'ACTIVE' | 'INACTIVE';
+
 export interface Room {
   id: number;
   roomNumber: string;
@@ -8,5 +10,13 @@ export interface Room {
   currentOccupancy: number;
   availableBeds: number;
   occupancyStatus: 'EMPTY' | 'AVAILABLE' | 'FULL';
-  status: 'ACTIVE' | 'INACTIVE';
+  status: RoomStatus;
+}
+
+export interface NewRoom {
+  roomNumber: string;
+  buildingCode: string;
+  monthlyRent: number;
+  maximumCapacity: number;
+  status: RoomStatus;
 }

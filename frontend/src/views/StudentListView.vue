@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStudentStore } from '../stores/studentStore';
 import { useRoomStore } from '../stores/roomStore';
+import { useBuildingStore } from '../stores/buildingStore.ts';
 import apiClient from '../services/api';
 import Swal from 'sweetalert2';
 import { Search, X, Plus } from '@lucide/vue';
@@ -12,16 +13,20 @@ import TableSkeleton, { type SkeletonColumn } from '../components/common/TableSk
 const router = useRouter();
 const studentStore = useStudentStore();
 const roomStore = useRoomStore();
+const buildingStore = useBuildingStore();
 
 const students = computed(() => studentStore.students);
 const isLoading = computed(() => studentStore.loading);
 
 onMounted(async () => {
   await studentStore.fetchStudents();
+  await buildingStore.fetchBuildings();
 });
 
 const searchQuery = ref('');
 const selectedBuilding = ref('All');
+
+const buildingCodeList = computed<string[]>(() => buildingStore.buildings.map((b) => b.code));
 
 const filteredStudents = computed(() => {
   return students.value.filter((s) => {
@@ -29,11 +34,9 @@ const filteredStudents = computed(() => {
       s.fullName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
       s.studentCode.toLowerCase().includes(searchQuery.value.toLowerCase());
 
-    let matchesBuilding = true;
-    if (selectedBuilding.value !== 'All') {
-      if (selectedBuilding.value === 'Building A') matchesBuilding = s.buildingCode === 'A';
-      else if (selectedBuilding.value === 'Building B') matchesBuilding = s.buildingCode === 'B';
-      else if (selectedBuilding.value === 'Building C') matchesBuilding = s.buildingCode === 'C';
+    let matchesBuilding = false;
+    if (selectedBuilding.value === 'All' || selectedBuilding.value === s.buildingCode) {
+      matchesBuilding = true;
     }
 
     return matchesSearch && matchesBuilding;
@@ -116,6 +119,9 @@ const handleDeleteStudent = async (student: any) => {
   }
 };
 
+const getBuildingByCode = (buildingCode: string) =>
+  buildingStore.buildings.find((b) => b.code == buildingCode);
+
 const studentSkeletonColumns: SkeletonColumn[] = [
   {
     key: 'student',
@@ -167,7 +173,7 @@ const studentSkeletonColumns: SkeletonColumn[] = [
         class="inline-flex items-center justify-center px-4 py-2.5 gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:bg-blue-400"
       >
         <Plus :size="20" />
-        <span>Add student</span>
+        <span>Add Student</span>
       </button>
     </div>
 
@@ -193,9 +199,7 @@ const studentSkeletonColumns: SkeletonColumn[] = [
           class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
         >
           <option value="All">All</option>
-          <option value="Building A">Building A</option>
-          <option value="Building B">Building B</option>
-          <option value="Building C">Building C</option>
+          <option v-for="building in buildingCodeList" :value="building">{{ building }}</option>
         </select>
       </div>
     </div>
@@ -214,6 +218,7 @@ const studentSkeletonColumns: SkeletonColumn[] = [
               <th class="px-6 py-4">Student</th>
               <th class="px-6 py-4">ID</th>
               <th class="px-6 py-4">Class</th>
+              <th class="px-6 py-4">Building Name</th>
               <th class="px-6 py-4">Room</th>
               <th class="px-6 py-4 text-right">Actions</th>
             </tr>
@@ -229,6 +234,9 @@ const studentSkeletonColumns: SkeletonColumn[] = [
               </td>
               <td class="px-6 py-4 text-gray-500">{{ s.studentCode }}</td>
               <td class="px-6 py-4 text-gray-500">{{ s.className }}</td>
+              <td class="px-6 py-4 text-gray-500">
+                {{ s.buildingCode ? getBuildingByCode(s.buildingCode)?.name : '-' }}
+              </td>
               <td class="px-6 py-4">
                 <span
                   :class="

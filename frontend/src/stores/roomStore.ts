@@ -1,12 +1,8 @@
 import { defineStore } from 'pinia';
 import apiClient, { getApiError } from '../services/api';
 import type { ApiResult } from '../types/apiError';
-import type { Room } from '../types/room';
+import type { NewRoom, Room } from '../types/room';
 import { delaySecond } from '../utils/delay';
-
-type CreateRoomRequest = Omit<Room, 'id' | 'occupied'> & {
-  occupied: number;
-};
 
 export const useRoomStore = defineStore('room', {
   state: () => ({
@@ -39,16 +35,11 @@ export const useRoomStore = defineStore('room', {
       }
     },
 
-    async addRoom(room: Omit<Room, 'id' | 'occupied'>): Promise<ApiResult<Room>> {
+    async addRoom(room: NewRoom): Promise<ApiResult<Room>> {
       this.error = null;
 
       try {
-        const payload: CreateRoomRequest = {
-          ...room,
-          occupied: 0,
-        };
-
-        const result = await apiClient.post<Room, CreateRoomRequest>('/rooms', payload);
+        const result = await apiClient.post<Room, NewRoom>('/rooms', room);
 
         if (result.success) {
           this.rooms.push(result.data);
@@ -64,11 +55,11 @@ export const useRoomStore = defineStore('room', {
       }
     },
 
-    async updateRoom(id: number, updatedData: Partial<Room>): Promise<ApiResult<Room>> {
+    async updateRoom(id: number, updatedData: NewRoom): Promise<ApiResult<Room>> {
       this.error = null;
 
       try {
-        const result = await apiClient.patch<Room, Partial<Room>>(`/rooms/${id}`, updatedData);
+        const result = await apiClient.put<Room, Partial<Room>>(`/rooms/${id}`, updatedData);
 
         if (result.success) {
           const index = this.rooms.findIndex((room) => room.id === id);

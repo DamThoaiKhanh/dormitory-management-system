@@ -7,6 +7,7 @@ import { Search, Plus } from '@lucide/vue';
 import TableSkeleton, { type SkeletonColumn } from '../components/common/TableSkeleton.vue';
 import type { Building } from '../types/building.ts';
 import { getErrorMessage } from '../services/api.ts';
+import { X } from '@lucide/vue';
 
 const buildingStore = useBuildingStore();
 const roomStore = useRoomStore();
@@ -32,7 +33,7 @@ const newBuilding = ref<Building>({
   status: 'ACTIVE' as 'ACTIVE' | 'INACTIVE',
 });
 
-const filteredBuildings = computed(() => {
+const filteredBuildings = computed((): Building[] => {
   return buildings.value.filter((b) => {
     const matchesSearch =
       b.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
@@ -172,7 +173,7 @@ const skeletonColumns: SkeletonColumn[] = [
         class="inline-flex items-center justify-center px-4 py-2.5 gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:bg-blue-400"
       >
         <Plus :size="20" />
-        <span>Add building</span>
+        <span>Add Building</span>
       </button>
     </div>
 
@@ -198,8 +199,8 @@ const skeletonColumns: SkeletonColumn[] = [
           class="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
         >
           <option value="All">All</option>
-          <option value="Active">Active</option>
-          <option value="Inactive">Inactive</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
         </select>
       </div>
     </div>
@@ -218,6 +219,7 @@ const skeletonColumns: SkeletonColumn[] = [
               <th class="px-6 py-4">Floors</th>
               <th class="px-6 py-4">Status</th>
               <th class="px-6 py-4 text-right">Actions</th>
+              <th class="px-6 py-4">Address</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
@@ -251,6 +253,7 @@ const skeletonColumns: SkeletonColumn[] = [
                   Delete
                 </button>
               </td>
+              <td class="px-6 py-4">{{ b.address }}</td>
             </tr>
             <tr v-if="filteredBuildings.length === 0">
               <td colspan="5" class="px-6 py-12 text-center text-gray-400">
@@ -270,15 +273,15 @@ const skeletonColumns: SkeletonColumn[] = [
       <div
         class="bg-white w-full max-w-lg rounded-xl shadow-xl border border-gray-100 overflow-hidden flex flex-col"
       >
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+        <div class="px-6 py-2 border-b border-gray-100 flex items-center justify-between">
           <h3 class="text-base font-bold text-gray-900">
             {{ editingBuildingCode ? 'Edit Building' : 'Add Building' }}
           </h3>
           <button
             @click="isOpenDialog = false"
-            class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer"
+            class="text-gray-400 p-2 text-lg cursor-pointer hover:text-red-600 hover:bg-gray-100 rounded-full"
           >
-            ✕
+            <X :size="20" stroke-width="3" />
           </button>
         </div>
 

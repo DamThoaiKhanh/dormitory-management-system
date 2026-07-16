@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useBuildingStore } from '../stores/buildingStore';
 import { useRoomStore } from '../stores/roomStore';
 import { useStudentStore } from '../stores/studentStore';
 import apiClient, { getErrorMessage } from '../services/api';
-import type { Student } from '../types/student';
+import type { NewStudent, Student } from '../types/student';
 import { useToast } from 'vue-toastification';
+import type { Room } from '../types/room';
 
 const router = useRouter();
 const route = useRoute();
+
+const buildingStore = useBuildingStore();
 const roomStore = useRoomStore();
 const studentStore = useStudentStore();
 const toast = useToast();
@@ -16,7 +20,25 @@ const toast = useToast();
 const isEditMode = computed(() => !!route.params.id);
 let oldRoomCode = '—';
 
+const selectedRoomInfo = ref({
+  building: '',
+  rooms: [] as Room[],
+});
+
 const currentStudent = ref<Student | null>(null);
+const newStudent = ref<NewStudent>({
+  studentCode: '',
+  fullName: '',
+  gender: 'MALE',
+  dateOfBirth: '',
+  citizenId: '',
+  phoneNumber: '',
+  address: '',
+  className: '',
+  major: '',
+  hometown: '',
+  roomId: 0,
+});
 
 const studentForm = ref({
   name: '',
@@ -33,10 +55,14 @@ const studentForm = ref({
   room: '',
 });
 
-const errors = ref({ name: '', studentId: '', phone: '', citizenId: '' });
+const errors = ref({ fullName: '', studentCode: '', phone: '', citizenId: '' });
 
 onMounted(async () => {
-  await roomStore.fetchRooms();
+  try {
+    await Promise.all([buildingStore.fetchBuildings(), roomStore.fetchRooms()]);
+  } catch (error) {
+    toast.error(getErrorMessage(error));
+  }
 
   if (isEditMode.value) {
     try {
@@ -44,9 +70,19 @@ onMounted(async () => {
       const result = await studentStore.fetchStudent(id);
       if (result.success) {
         currentStudent.value = result.data;
-        toast.success(`OK detail student ${id}`);
 
         const s = result.data;
+        newStudent.value.studentCode = result.data.studentCode;
+        newStudent.value.fullName = result.data.fullName;
+        newStudent.value.gender = result.data.gender;
+        newStudent.value.dateOfBirth = result.data.dateOfBirth;
+        newStudent.value.citizenId = result.data.citizenId;
+        newStudent.value.phoneNumber = result.data.phoneNumber;
+        newStudent.value.address = result.data.address;
+        newStudent.value.className = result.data.className;
+        newStudent.value.major = result.data.major;
+        newStudent.value.hometown = result.data.hometown;
+        newStudent.value.roomId = result.data.roomId;
 
         let bName = '';
         let rNum = '';
@@ -81,18 +117,18 @@ onMounted(async () => {
 
 const validateForm = () => {
   let isValid = true;
-  errors.value = { name: '', studentId: '', phone: '', citizenId: '' };
+  errors.value = { fullName: '', studentCode: '', phone: '', citizenId: '' };
 
   if (!studentForm.value.name.trim()) {
-    errors.value.name = 'Full name is required.';
+    errors.value.fullName = 'Full name is required.';
     isValid = false;
   }
   const studentIdRegex = /^[A-Z0-9]{4,12}$/;
   if (!studentForm.value.studentId.trim()) {
-    errors.value.studentId = 'Student ID is required.';
+    errors.value.studentCode = 'Student ID is required.';
     isValid = false;
   } else if (!studentIdRegex.test(studentForm.value.studentId.toUpperCase())) {
-    errors.value.studentId = 'Student ID must be uppercase alphanumeric (4-12 chars).';
+    errors.value.studentCode = 'Student ID must be uppercase alphanumeric (4-12 chars).';
     isValid = false;
   }
   return isValid;
@@ -106,47 +142,42 @@ watch(
   }
 );
 
+watch(
+  () => selectedRoomInfo.value.building,
+  (newValue) => {
+    selectedRoomInfo.value.rooms = roomStore.rooms.filter((r) => r.buildingCode === newValue);
+  }
+);
+
+watch(
+  () => newStudent.value.roomId,
+  (newValue) => {
+    console.log(newValue);
+  }
+);
+
 const getAvailableRooms = computed(() => {
-  if (!studentForm.value.building) return [];
+  if (!selectedRoomInfo.value.building) return [];
   return roomStore.rooms.filter(
     (room) =>
-      room.buildingName === studentForm.value.building &&
-      (room.currentOccupancy < room.maximumCapacity ||
-        `${studentForm.value.building.replace('Building ', '')}-${room.roomNumber}` ===
-          oldRoomCode) &&
+      room.buildingCode === selectedRoomInfo.value.building &&
+      room.currentOccupancy < room.maximumCapacity &&
       room.status === 'ACTIVE'
   );
 });
 
 const handleSave = async () => {
   if (!validateForm()) return;
-  const selectedRoomCode = studentForm.value.room || '—';
   if (isEditMode.value) {
-    await apiClient.patch(`/students/${route.params.id}`, {
-      studentId: studentForm.value.studentId.toUpperCase(),
-      name: studentForm.value.name,
-      className: studentForm.value.className || 'N/A',
-      roomCode: selectedRoomCode,
-    });
-
-    if (oldRoomCode !== selectedRoomCode) {
-      if (oldRoomCode !== '—') {
-        const oldNum = oldRoomCode.split('-')[1];
-        const oldRoom = roomStore.rooms.find((r) => r.roomNumber === oldNum);
-        if (oldRoom)
-          await apiClient.patch(`/rooms/${oldRoom.id}`, {
-            occupied: Math.max(0, oldRoom.currentOccupancy - 1),
-          });
+    try {
+      const result = await studentStore.updateStudent(Number(route.params.id), newStudent.value);
+      if (result.success) {
+        toast.success('ok');
+      } else {
+        toast.error(result.error.message);
       }
-
-      if (selectedRoomCode !== '—') {
-        const newNum = selectedRoomCode.split('-')[1];
-        const newRoom = roomStore.rooms.find((r) => r.roomNumber === newNum);
-        if (newRoom)
-          await apiClient.patch(`/rooms/${newRoom.id}`, {
-            occupied: newRoom.currentOccupancy + 1,
-          });
-      }
+    } catch (error) {
+      toast.error(getErrorMessage(error));
     }
   } else {
     // await studentStore.addStudent(currentStudent.value?);
@@ -199,29 +230,29 @@ const handleCancel = () => router.push('/students');
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Full Name *</label>
             <input
-              v-model="studentForm.name"
+              v-model="newStudent.fullName"
               type="text"
               placeholder="Nguyễn Văn A"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
-            <p v-if="errors.name" class="text-xs text-rose-500 mt-1">
-              {{ errors.name }}
+            <p v-if="errors.fullName" class="text-xs text-rose-500 mt-1">
+              {{ errors.fullName }}
             </p>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Gender</label>
             <select
-              v-model="studentForm.gender"
+              v-model="newStudent.gender"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
             >
-              <option value="MALE">Male</option>
-              <option value="FEMALE">Female</option>
+              <option value="MALE">MALE</option>
+              <option value="FEMALE">FEMALE</option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Date of Birth</label>
             <input
-              v-model="studentForm.dob"
+              v-model="newStudent.dateOfBirth"
               type="date"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
@@ -229,7 +260,7 @@ const handleCancel = () => router.push('/students');
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Citizen ID</label>
             <input
-              v-model="studentForm.citizenId"
+              v-model="newStudent.citizenId"
               type="text"
               placeholder="012345678901"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
@@ -238,7 +269,7 @@ const handleCancel = () => router.push('/students');
           <div class="md:col-span-2">
             <label class="block text-xs font-semibold text-gray-600 mb-1">Phone Number</label>
             <input
-              v-model="studentForm.phone"
+              v-model="newStudent.phoneNumber"
               type="text"
               placeholder="0912345678"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
@@ -250,11 +281,20 @@ const handleCancel = () => router.push('/students');
           <div class="md:col-span-2">
             <label class="block text-xs font-semibold text-gray-600 mb-1">Address</label>
             <textarea
-              v-model="studentForm.address"
+              v-model="newStudent.address"
               rows="2"
               placeholder="Permanent residence address..."
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             ></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Hometown</label>
+            <input
+              v-model="newStudent.hometown"
+              type="text"
+              placeholder="Hanoi"
+              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+            />
           </div>
         </div>
       </div>
@@ -268,21 +308,21 @@ const handleCancel = () => router.push('/students');
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Student ID *</label>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Student Code *</label>
             <input
-              v-model="studentForm.studentId"
+              v-model="newStudent.studentCode"
               type="text"
-              placeholder="e.g. SV001"
+              placeholder=""
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
-            <p v-if="errors.studentId" class="text-xs text-rose-500 mt-1">
-              {{ errors.studentId }}
+            <p v-if="errors.studentCode" class="text-xs text-rose-500 mt-1">
+              {{ errors.studentCode }}
             </p>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Class</label>
             <input
-              v-model="studentForm.className"
+              v-model="newStudent.className"
               type="text"
               placeholder="e.g. CNTT-01"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
@@ -291,18 +331,9 @@ const handleCancel = () => router.push('/students');
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Major</label>
             <input
-              v-model="studentForm.major"
+              v-model="newStudent.major"
               type="text"
               placeholder="Computer Science"
-              class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Hometown</label>
-            <input
-              v-model="studentForm.hometown"
-              type="text"
-              placeholder="Hanoi"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500"
             />
           </div>
@@ -320,39 +351,36 @@ const handleCancel = () => router.push('/students');
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Building</label>
             <select
-              v-model="studentForm.building"
+              v-model="selectedRoomInfo.building"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-500"
             >
-              <option value="">-- Leave Unassigned --</option>
-              <option value="Building A">Building A</option>
-              <option value="Building B">Building B</option>
-              <option value="Building C">Building C</option>
+              <option
+                v-for="buildingCode in buildingStore.buildings.map((b) => b.code)"
+                :key="buildingCode"
+                :value="buildingCode"
+              >
+                {{ buildingCode }}
+              </option>
             </select>
           </div>
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">Room</label>
             <select
-              v-model="studentForm.room"
-              :disabled="!studentForm.building"
+              v-model="newStudent.roomId"
               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed"
             >
-              <option value="">-- Select Room --</option>
-              <option
-                v-for="room in getAvailableRooms"
-                :key="room.id"
-                :value="studentForm.building.replace('Building ', '') + '-' + room.roomNumber"
-              >
+              <option v-for="room in selectedRoomInfo.rooms" :key="room.id" :value="room.id">
                 Room {{ room.roomNumber }} ({{ room.currentOccupancy }}/{{ room.maximumCapacity }}
                 beds)
               </option>
             </select>
             <p
-              v-if="studentForm.building && getAvailableRooms.length === 0"
+              v-if="selectedRoomInfo.building && getAvailableRooms.length === 0"
               class="text-xs text-rose-500 mt-1"
             >
               ⚠️ All rooms in this building are currently full or inactive.
             </p>
-            <p v-else-if="studentForm.building" class="text-xs text-emerald-600 mt-1">
+            <p v-else-if="selectedRoomInfo.building" class="text-xs text-emerald-600 mt-1">
               Found {{ getAvailableRooms.length }} available room(s) in this building.
             </p>
           </div>

@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<Staff | null>(JSON.parse(localStorage.getItem('user') || 'null'));
   const token = ref<string | null>(localStorage.getItem('token'));
   const toast = useToast();
+  const error = ref('');
 
   const isAuthenticated = computed(() => Boolean(token.value));
   const userRole = computed(() => user.value?.role ?? null);
@@ -54,6 +55,7 @@ export const useAuthStore = defineStore('auth', () => {
       });
 
       if (!result.success) {
+        error.value = result.error.message;
         toast.error(result.error.message);
         return false;
       }
@@ -76,6 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (exception) {
       const apiError = getApiError(exception);
       toast.error(apiError.message);
+      error.value = apiError.message;
       return false;
     }
   };
@@ -85,7 +88,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = null;
     localStorage.removeItem('user');
     localStorage.removeItem('token');
-    toast.info('Đã đăng xuất khỏi hệ thống.');
+    toast.info('Logout!');
   };
 
   return {

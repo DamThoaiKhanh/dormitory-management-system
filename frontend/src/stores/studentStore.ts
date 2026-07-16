@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import apiClient, { getApiError } from '../services/api';
 import type { ApiResult } from '../types/apiError';
-import type { Student } from '../types/student';
+import type { NewStudent, Student } from '../types/student';
 import { delaySecond } from '../utils/delay';
 
 export const useStudentStore = defineStore('student', {
@@ -63,6 +63,27 @@ export const useStudentStore = defineStore('student', {
 
       try {
         const result = await apiClient.post<Student, Student>('/students', student);
+
+        if (result.success) {
+          this.students.push(result.data);
+        } else {
+          this.error = result.error.message;
+        }
+
+        return result;
+      } catch (exception) {
+        const apiError = getApiError(exception);
+        this.error = apiError.message;
+        return { success: false, error: apiError };
+      }
+    },
+
+    async updateStudent(id: number, student: NewStudent): Promise<ApiResult<Student>> {
+      this.error = null;
+
+      try {
+        console.log(student);
+        const result = await apiClient.put<Student, NewStudent>(`/students/${id}`, student);
 
         if (result.success) {
           this.students.push(result.data);

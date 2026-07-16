@@ -256,7 +256,7 @@ POST /api/v1/rooms
   "roomNumber": "101",
   "buildingCode": "A",
   "monthlyRent": 80.00,
-  "maxOccupants": 4,
+  "maximumCapacity": 4,
   "status": "ACTIVE"
 }
 ```
@@ -673,7 +673,7 @@ POST /api/v1/staff
   "citizenId": "012345678902",
   "phoneNumber": "0987654321",
   "address": "45 Le Loi Street, District 1, Ho Chi Minh City",
-  "managedBuildingCode": "A"
+  "assignedBuildingCode": "A"
 }
 ```
 

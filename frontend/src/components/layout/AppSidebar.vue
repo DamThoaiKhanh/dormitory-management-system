@@ -41,12 +41,25 @@ const menuItems: MenuItem[] = [
     </button>
 
     <!-- Logo -->
-    <div class="h-16 flex items-center px-6 border-b border-gray-200">
-      <img :src="logo" alt="Dorm Manager Logo" class="w-10 h-10 mr-3 object-cover rounded-full" />
-      <span class="hidden md:block text-xl font-bold text-blue-600 tracking-wide"
-        >Dorm Manager</span
+
+    <div>
+      <router-link
+        to="/dashboard"
+        @click="$emit('close')"
+        class="flex items-center justify-start space-x-3 px-2 py-1 rounded-lg text-base font-medium transition-colors"
       >
-      <span class="md:hidden text-lg font-bold text-blue-600 tracking-wide">DMS</span>
+        <div class="h-16 w-full flex items-center px-2 border-b border-gray-200">
+          <img
+            :src="logo"
+            alt="Dorm Manager Logo"
+            class="w-10 h-10 mr-3 object-cover rounded-full"
+          />
+          <span class="hidden md:block text-xl font-bold text-blue-600 tracking-wide"
+            >Dorm Manager</span
+          >
+          <span class="md:hidden text-lg font-bold text-blue-600 tracking-wide">DMS</span>
+        </div>
+      </router-link>
     </div>
 
     <!-- Navigation -->

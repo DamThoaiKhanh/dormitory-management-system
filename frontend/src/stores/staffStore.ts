@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import apiClient, { getApiError } from '../services/api';
 import type { ApiResult } from '../types/apiError';
-import type { Staff } from '../types/staff';
+import type { NewStaff, Staff } from '../types/staff';
 
 export const useStaffStore = defineStore('staff', {
   state: () => ({
@@ -34,11 +34,11 @@ export const useStaffStore = defineStore('staff', {
       }
     },
 
-    async addStaff(staff: Staff): Promise<ApiResult<Staff>> {
+    async addStaff(staff: NewStaff): Promise<ApiResult<Staff>> {
       this.error = null;
 
       try {
-        const result = await apiClient.post<Staff, Staff>('/staff', staff);
+        const result = await apiClient.post<Staff, NewStaff>('/staff', staff);
 
         if (result.success) {
           this.staffList.push(result.data);

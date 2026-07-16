@@ -1,0 +1,8 @@
+// listing docker process status
+docker ps
+
+// start container
+docker start my-postgres
+
+// open db
+docker exec -it my-postgres psql -U myappuser -d dormitory_db
