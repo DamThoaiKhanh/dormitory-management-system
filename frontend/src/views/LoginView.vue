@@ -23,7 +23,7 @@ const handleLogin = async () => {
   try {
     const success = await authStore.login(username.value, password.value);
     if (success) {
-      toast.success('Welcome back, Admin!');
+      toast.success(`Welcome back, ${username.value}!`);
       router.push('/dashboard');
     } else {
       toast.error('Invalid credentials, please try again.');
@@ -40,7 +40,7 @@ const handleLogin = async () => {
   <LoginForm
     v-model:username="username"
     v-model:password="password"
-    :is-loading="isLoading"
+    :isLoading="isLoading"
     @submit="handleLogin"
   />
 </template>

@@ -42,8 +42,6 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('user', JSON.stringify(mockStaff));
         localStorage.setItem('token', token.value);
 
-        console.log('Login bypass mode activated');
-        toast.success(`Welcome back ${mockStaff.fullName}!`);
         return true;
       }
 
@@ -73,12 +71,12 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.setItem('user', JSON.stringify(foundStaff));
       localStorage.setItem('token', token.value);
 
-      toast.success(`Welcome back ${foundStaff.fullName}!`);
       return true;
     } catch (exception) {
       const apiError = getApiError(exception);
       toast.error(apiError.message);
       error.value = apiError.message;
+      throw exception;
       return false;
     }
   };
